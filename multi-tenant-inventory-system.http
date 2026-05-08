@@ -1,0 +1,6 @@
+@multi_tenant_inventory_system_HostAddress = http://localhost:5137
+
+GET {{multi_tenant_inventory_system_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
