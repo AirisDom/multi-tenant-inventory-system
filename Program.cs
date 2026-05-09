@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using multi_tenant_inventory_system.Data;
+using multi_tenant_inventory_system.Middleware;
 using multi_tenant_inventory_system.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -9,17 +10,24 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 
+builder.Services.AddAuthentication();
+builder.Services.AddAuthorization();
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.UseTenantResolution();
 
 var summaries = new[]
 {
