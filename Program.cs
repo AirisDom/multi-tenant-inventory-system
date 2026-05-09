@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using multi_tenant_inventory_system.Data;
+using multi_tenant_inventory_system.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddScoped<ITenantContext, TenantContext>();
 
 builder.Services.AddOpenApi();
 
