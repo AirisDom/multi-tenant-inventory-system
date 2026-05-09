@@ -5,4 +5,6 @@ public class Tenant
     public Guid Id { get; set; }
     public required string Name { get; set; }
     public DateTime CreatedAt { get; set; }
+
+    public ICollection<User> Users { get; set; } = new List<User>();
 }
