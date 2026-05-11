@@ -121,6 +121,36 @@ app.MapPost("/api/register", async (RegisterRequest request, AppDbContext db, IP
 .WithName("Register")
 .AllowAnonymous();
 
+app.MapPost("/api/login", async (LoginRequest request, AppDbContext db, IPasswordHasher passwordHasher, ITokenService tokenService) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Email))
+        return Results.BadRequest(new { error = "Email is required" });
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+        return Results.BadRequest(new { error = "Password is required" });
+
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+    if (user == null)
+        return Results.Unauthorized();
+
+    if (!passwordHasher.VerifyPassword(request.Password, user.PasswordHash))
+        return Results.Unauthorized();
+
+    var token = tokenService.GenerateToken(user);
+
+    var response = new LoginResponse
+    {
+        Token = token,
+        UserId = user.Id,
+        Email = user.Email,
+        TenantId = user.TenantId
+    };
+
+    return Results.Ok(response);
+})
+.WithName("Login")
+.AllowAnonymous();
+
 var summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
