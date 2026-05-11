@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using multi_tenant_inventory_system.Data;
+using multi_tenant_inventory_system.DTOs;
 using multi_tenant_inventory_system.Middleware;
+using multi_tenant_inventory_system.Models;
 using multi_tenant_inventory_system.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,6 +57,69 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseTenantResolution();
+
+app.MapPost("/api/register", async (RegisterRequest request, AppDbContext db, IPasswordHasher passwordHasher) =>
+{
+    if (string.IsNullOrWhiteSpace(request.TenantName))
+        return Results.BadRequest(new { error = "TenantName is required" });
+
+    if (string.IsNullOrWhiteSpace(request.Email))
+        return Results.BadRequest(new { error = "Email is required" });
+
+    if (string.IsNullOrWhiteSpace(request.Password))
+        return Results.BadRequest(new { error = "Password is required" });
+
+    if (request.Password.Length < 6)
+        return Results.BadRequest(new { error = "Password must be at least 6 characters" });
+
+    var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
+    if (existingUser != null)
+        return Results.Conflict(new { error = "Email already registered" });
+
+    await using var transaction = await db.Database.BeginTransactionAsync();
+
+    try
+    {
+        var tenant = new Tenant
+        {
+            Id = Guid.NewGuid(),
+            Name = request.TenantName,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            Email = request.Email,
+            PasswordHash = passwordHasher.HashPassword(request.Password),
+            TenantId = tenant.Id,
+            Role = "TenantAdmin"
+        };
+
+        db.Tenants.Add(tenant);
+        db.Users.Add(user);
+
+        await db.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        var response = new RegisterResponse
+        {
+            TenantId = tenant.Id,
+            UserId = user.Id,
+            Email = user.Email,
+            TenantName = tenant.Name
+        };
+
+        return Results.Created($"/api/tenants/{tenant.Id}", response);
+    }
+    catch
+    {
+        await transaction.RollbackAsync();
+        return Results.Problem("An error occurred during registration");
+    }
+})
+.WithName("Register")
+.AllowAnonymous();
 
 var summaries = new[]
 {
