@@ -42,6 +42,7 @@ builder.Services.AddAuthentication(options =>
 });
 builder.Services.AddAuthorization();
 
+builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
@@ -57,6 +58,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseTenantResolution();
+
+app.MapControllers();
 
 app.MapPost("/api/register", async (RegisterRequest request, AppDbContext db, IPasswordHasher passwordHasher) =>
 {

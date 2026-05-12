@@ -1,0 +1,57 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using multi_tenant_inventory_system.Data;
+using multi_tenant_inventory_system.DTOs;
+using multi_tenant_inventory_system.Models;
+using multi_tenant_inventory_system.Services;
+
+namespace multi_tenant_inventory_system.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class ProductsController : ControllerBase
+{
+    private readonly AppDbContext _db;
+    private readonly ITenantContext _tenantContext;
+
+    public ProductsController(AppDbContext db, ITenantContext tenantContext)
+    {
+        _db = db;
+        _tenantContext = tenantContext;
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ProductResponse>> Create(CreateProductRequest request)
+    {
+        if (_tenantContext.TenantId == null)
+            return Unauthorized();
+
+        var product = new Product
+        {
+            Id = Guid.NewGuid(),
+            TenantId = _tenantContext.TenantId.Value,
+            Name = request.Name,
+            SKU = request.SKU,
+            StockCount = request.StockCount,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        _db.Products.Add(product);
+        await _db.SaveChangesAsync();
+
+        var response = new ProductResponse
+        {
+            Id = product.Id,
+            TenantId = product.TenantId,
+            Name = product.Name,
+            SKU = product.SKU,
+            StockCount = product.StockCount,
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt
+        };
+
+        return CreatedAtAction(nameof(Create), new { id = product.Id }, response);
+    }
+}
