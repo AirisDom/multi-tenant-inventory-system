@@ -100,4 +100,34 @@ public class ProductsController : ControllerBase
             UpdatedAt = product.UpdatedAt
         });
     }
+
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult<ProductResponse>> Update(Guid id, UpdateProductRequest request)
+    {
+        if (_tenantContext.TenantId == null)
+            return Unauthorized();
+
+        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
+            return NotFound();
+
+        product.Name = request.Name;
+        product.SKU = request.SKU;
+        product.StockCount = request.StockCount;
+        product.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new ProductResponse
+        {
+            Id = product.Id,
+            TenantId = product.TenantId,
+            Name = product.Name,
+            SKU = product.SKU,
+            StockCount = product.StockCount,
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt
+        });
+    }
 }
