@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using multi_tenant_inventory_system.Data;
 using multi_tenant_inventory_system.DTOs;
+using multi_tenant_inventory_system.Filters;
 using multi_tenant_inventory_system.Middleware;
 using multi_tenant_inventory_system.Models;
 using multi_tenant_inventory_system.Services;
@@ -63,18 +64,6 @@ app.MapControllers();
 
 app.MapPost("/api/register", async (RegisterRequest request, AppDbContext db, IPasswordHasher passwordHasher) =>
 {
-    if (string.IsNullOrWhiteSpace(request.TenantName))
-        return Results.BadRequest(new { error = "TenantName is required" });
-
-    if (string.IsNullOrWhiteSpace(request.Email))
-        return Results.BadRequest(new { error = "Email is required" });
-
-    if (string.IsNullOrWhiteSpace(request.Password))
-        return Results.BadRequest(new { error = "Password is required" });
-
-    if (request.Password.Length < 6)
-        return Results.BadRequest(new { error = "Password must be at least 6 characters" });
-
     var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
     if (existingUser != null)
         return Results.Conflict(new { error = "Email already registered" });
@@ -121,17 +110,12 @@ app.MapPost("/api/register", async (RegisterRequest request, AppDbContext db, IP
         return Results.Problem("An error occurred during registration");
     }
 })
+.AddEndpointFilter<ValidationFilter<RegisterRequest>>()
 .WithName("Register")
 .AllowAnonymous();
 
 app.MapPost("/api/login", async (LoginRequest request, AppDbContext db, IPasswordHasher passwordHasher, ITokenService tokenService) =>
 {
-    if (string.IsNullOrWhiteSpace(request.Email))
-        return Results.BadRequest(new { error = "Email is required" });
-
-    if (string.IsNullOrWhiteSpace(request.Password))
-        return Results.BadRequest(new { error = "Password is required" });
-
     var user = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
     if (user == null)
         return Results.Unauthorized();
@@ -151,6 +135,7 @@ app.MapPost("/api/login", async (LoginRequest request, AppDbContext db, IPasswor
 
     return Results.Ok(response);
 })
+.AddEndpointFilter<ValidationFilter<LoginRequest>>()
 .WithName("Login")
 .AllowAnonymous();
 
