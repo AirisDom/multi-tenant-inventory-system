@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using multi_tenant_inventory_system.Data;
 using multi_tenant_inventory_system.DTOs;
 using multi_tenant_inventory_system.Models;
@@ -53,5 +54,27 @@ public class ProductsController : ControllerBase
         };
 
         return CreatedAtAction(nameof(Create), new { id = product.Id }, response);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<ProductResponse>>> GetAll()
+    {
+        if (_tenantContext.TenantId == null)
+            return Unauthorized();
+
+        var products = await _db.Products
+            .Select(p => new ProductResponse
+            {
+                Id = p.Id,
+                TenantId = p.TenantId,
+                Name = p.Name,
+                SKU = p.SKU,
+                StockCount = p.StockCount,
+                CreatedAt = p.CreatedAt,
+                UpdatedAt = p.UpdatedAt
+            })
+            .ToListAsync();
+
+        return Ok(products);
     }
 }
