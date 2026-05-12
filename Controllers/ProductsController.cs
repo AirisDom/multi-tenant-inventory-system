@@ -77,4 +77,27 @@ public class ProductsController : ControllerBase
 
         return Ok(products);
     }
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<ProductResponse>> GetById(Guid id)
+    {
+        if (_tenantContext.TenantId == null)
+            return Unauthorized();
+
+        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
+            return NotFound();
+
+        return Ok(new ProductResponse
+        {
+            Id = product.Id,
+            TenantId = product.TenantId,
+            Name = product.Name,
+            SKU = product.SKU,
+            StockCount = product.StockCount,
+            CreatedAt = product.CreatedAt,
+            UpdatedAt = product.UpdatedAt
+        });
+    }
 }
