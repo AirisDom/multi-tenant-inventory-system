@@ -130,4 +130,21 @@ public class ProductsController : ControllerBase
             UpdatedAt = product.UpdatedAt
         });
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        if (_tenantContext.TenantId == null)
+            return Unauthorized();
+
+        var product = await _db.Products.FirstOrDefaultAsync(p => p.Id == id);
+
+        if (product == null)
+            return NotFound();
+
+        _db.Products.Remove(product);
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
 }
