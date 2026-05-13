@@ -48,6 +48,8 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.UseExceptionHandling();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
