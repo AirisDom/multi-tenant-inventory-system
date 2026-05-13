@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="multi-tenant-inventory-system.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="Tests/**" />
   </ItemGroup>
 
