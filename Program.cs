@@ -1,7 +1,9 @@
+using System.Reflection;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using multi_tenant_inventory_system.Data;
 using multi_tenant_inventory_system.DTOs;
 using multi_tenant_inventory_system.Filters;
@@ -44,7 +46,45 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Multi-Tenant Inventory System API",
+        Version = "v1",
+        Description = "A multi-tenant inventory management API with tenant isolation"
+    });
+
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Enter your JWT token"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+});
 
 var app = builder.Build();
 
@@ -52,7 +92,11 @@ app.UseExceptionHandling();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Multi-Tenant Inventory API v1");
+    });
 }
 
 app.UseHttpsRedirection();
@@ -114,6 +158,11 @@ app.MapPost("/api/register", async (RegisterRequest request, AppDbContext db, IP
 })
 .AddEndpointFilter<ValidationFilter<RegisterRequest>>()
 .WithName("Register")
+.WithTags("Authentication")
+.WithSummary("Register a new tenant and user")
+.WithDescription("Creates a new tenant organization and an admin user account simultaneously")
+.Produces<RegisterResponse>(StatusCodes.Status201Created)
+.Produces(StatusCodes.Status409Conflict)
 .AllowAnonymous();
 
 app.MapPost("/api/login", async (LoginRequest request, AppDbContext db, IPasswordHasher passwordHasher, ITokenService tokenService) =>
@@ -139,6 +188,11 @@ app.MapPost("/api/login", async (LoginRequest request, AppDbContext db, IPasswor
 })
 .AddEndpointFilter<ValidationFilter<LoginRequest>>()
 .WithName("Login")
+.WithTags("Authentication")
+.WithSummary("Authenticate and obtain JWT token")
+.WithDescription("Validates user credentials and returns a JWT token for API authorization")
+.Produces<LoginResponse>(StatusCodes.Status200OK)
+.Produces(StatusCodes.Status401Unauthorized)
 .AllowAnonymous();
 
 var summaries = new[]
